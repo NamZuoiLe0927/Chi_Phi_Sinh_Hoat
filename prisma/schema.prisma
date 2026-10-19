@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profile {
+  id                 String   @id @default(cuid())
+  name               String   @default("Người dùng")
+  monthlyIncome      Float    @default(20000000)
+  extraIncome        Float    @default(0)
+  cityTier           String   @default("HANOI_HCM")
+  lifestyle          String   @default("BALANCED")
+  dependents         Int      @default(0)
+  budgetRule         String   @default("RULE_50_30_20")
+  savingsGoalAmount  Float    @default(4000000)
+  inflationRate      Float    @default(0.04)
+  workHoursPerDay    Float    @default(8)
+  workDaysPerMonth   Int      @default(22)
+  commuteHoursPerDay Float    @default(1)
+  currentSavings     Float    @default(0)
+  initialSavingsFund Float    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  expenseItems   ExpenseItem[]
+  transactions   DailyTransaction[]
+  monthlyRecords MonthlyRecord[]
+
+  @@map("profiles")
+}
+
+model CategoryGroup {
+  id          String  @id @default(cuid())
+  code        String  @unique
+  name        String
+  description String?
+  color       String
+  icon        String
+  sortOrder   Int     @default(0)
+
+  @@map("category_groups")
+}
+
+model ExpenseItem {
+  id                String   @id @default(cuid())
+  profileId         String
+  name              String
+  group             String
+  icon              String   @default("Wallet")
+  color             String   @default("#10b981")
+  frequency         String   @default("MONTHLY")
+  unitPrice         Float    @default(0)
+  quantityPerPeriod Float    @default(1)
+  isFixed           Boolean  @default(false)
+  isEnabled         Boolean  @default(true)
+  priority          Int      @default(3)
+  note              String?
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  profile      Profile            @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  transactions DailyTransaction[]
+
+  @@index([profileId])
+  @@index([group])
+  @@map("expense_items")
+}
+
+model DailyTransaction {
+  id            String   @id @default(cuid())
+  profileId     String
+  expenseItemId String?
+  title         String
+  amount        Float
+  date          DateTime
+  paymentMethod String   @default("CASH")
+  paymentSource String   @default("CASH")
+  categoryCode  String   @default("OTHER")
+  note          String?
+  source        String   @default("MANUAL")
+  createdAt     DateTime @default(now())
+
+  profile     Profile      @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  expenseItem ExpenseItem? @relation(fields: [expenseItemId], references: [id], onDelete: SetNull)
+
+  @@index([profileId])
+  @@index([expenseItemId])
+  @@index([date])
+  @@map("daily_transactions")
+}
+
+model MonthlyRecord {
+  id               String   @id @default(cuid())
+  profileId        String
+  month            String
+  year             Int
+  monthIndex       Int
+  income           Float    @default(0)
+  manualNetBalance Float?
+  note             String   @default("")
+  mode             String   @default("AUTO")
+  isSettled        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, month])
+  @@index([profileId])
+  @@index([year])
+  @@map("monthly_records")
+}
